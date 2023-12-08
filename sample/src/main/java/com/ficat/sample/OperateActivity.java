@@ -1,5 +1,7 @@
 package com.ficat.sample;
 
+import static java.lang.reflect.Array.getShort;
+
 import android.app.ProgressDialog;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
@@ -27,6 +29,8 @@ import com.ficat.easyble.gatt.callback.BleWriteCallback;
 import com.ficat.sample.adapter.DeviceServiceInfoAdapter;
 import com.ficat.sample.utils.ByteUtils;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -222,43 +226,8 @@ public class OperateActivity extends AppCompatActivity implements View.OnClickLi
                 Log.i("hi", "uuid: " + curService.uuid + " charuuid: " + curCharacteristic.uuid);
                 write_done = 0;
                 BleManager.getInstance().write(device, curService.uuid, curCharacteristic.uuid, str.getBytes(), writeCallback);
-//                while (write_done == 0) ;
-                while (true)     //evil lockout hack time
-                {
-                    double time = (double)System.currentTimeMillis() / 1000.0;
-//                    Log.i("hi",String.format("time=%f",time));
-                    byte[] barr = new byte[25];
-                    barr[0] = 77;   //0x4D
-                    int bidx = 1;
-                    for(int ch = 0; ch < 6; ch++)
-                    {
-                        double fpos = 40.0 * (Math.sin(time)*0.5+0.5)*40.+15.;
-                        if(ch == 5)
-                        {
-                            fpos = -fpos;
-                        }
-                        float fper = 0.2f;
-                        int fpostrans = (int)((fpos * 32767.) / 150.);
-                        int fpertrans = (int)((fper * 65535.) / 300.);
-                        byte[] b1 = uint16ToByteArray(fpostrans);
-                        byte[] b2 = uint16ToByteArray(fpertrans);
-                        for(int i = 0; i < 2; i++)
-                        {
-                            barr[bidx] = b1[i];
-                            bidx++;
-                        }
-                        for(int i = 0; i < 2; i++)
-                        {
-                            barr[bidx] = b2[i];
-                            bidx++;
-                        }
-                    }
-                    String displayString = ByteUtils.bytes2HexStr(barr);
-//                    Log.i("hi","Sending: "+displayString);
-                    BleManager.getInstance().write(device, curService.uuid, curCharacteristic.uuid, barr, writeCallback);
-//                    while (write_done == 0) ;
-                }
-//                break;
+
+                break;
             }
             case R.id.tv_notify_or_indicate:
                 BleManager.getInstance().notify(device, curService.uuid, curCharacteristic.uuid, notifyCallback);
@@ -358,10 +327,65 @@ public class OperateActivity extends AppCompatActivity implements View.OnClickLi
     private BleWriteCallback writeCallback = new BleWriteCallback() {
         @Override
         public void onWriteSuccess(byte[] data, BleDevice device) {
+
             //Logger.e("write success:" + ByteUtils.bytes2HexStr(data));
             write_done = 1;
-            Log.i("hi", "write success: "+ByteUtils.bytes2HexStr(data));
-            tvWriteResult.setText(ByteUtils.bytes2HexStr(data));
+
+            //Log.i("hi", "write success: "+ByteUtils.bytes2HexStr(data));
+            double time = (double)System.currentTimeMillis() / 1000.0;
+            double fpos = 80.0 * (Math.sin(time)*0.5+0.5)+15.;
+//                    Log.i("hi",String.format("time=%f",time));
+            byte[] barr = new byte[25];
+            barr[0] = 77;   //0x4D
+            int bidx = 1;
+            double[] ogfposarr = new double[6];
+            for(int ch = 0; ch < 6; ch++)
+            {
+
+                if(ch == 5)
+                {
+                    fpos = -fpos;
+                }
+                ogfposarr[ch] = fpos;
+                float fper = 1.2f;
+                int fpostrans = (int)((fpos * 32767.) / 150.);
+                int fpertrans = (int)((fper * 65535.) / 300.);
+                byte[] b1 = uint16ToByteArray(fpostrans);
+                byte[] b2 = uint16ToByteArray(fpertrans);
+                for(int i = 0; i < 2; i++)
+                {
+                    barr[bidx] = b1[i];
+                    bidx++;
+                }
+                for(int i = 0; i < 2; i++)
+                {
+                    barr[bidx] = b2[i];
+                    bidx++;
+                }
+            }
+            double[] fposarr = new double[6];
+            bidx = 1;
+            for(int ch = 0; ch < 6; ch++)
+            {
+                byte[] b16 = new byte[2];
+                for(int i = 0; i < 2; i++) {
+                    b16[i] = barr[bidx];
+                    bidx++;
+                }
+                bidx+=2;
+                short x =  java.nio.ByteBuffer.wrap(b16).order(java.nio.ByteOrder.LITTLE_ENDIAN).getShort();
+                double res = ((double)x*150.)/32767.;
+                fposarr[ch] = res;
+            }
+            //            String displayString = ByteUtils.bytes2HexStr(barr);
+            //            Log.i("hi","Sending: "+displayString);
+            if(ogfposarr[0] != fposarr[0])
+            {
+                Log.i("hi", String.format("%f, %f",fposarr[0],ogfposarr[0] ));
+            }
+            BleManager.getInstance().write(device, curService.uuid, curCharacteristic.uuid, barr, writeCallback);
+
+//            tvWriteResult.setText(ByteUtils.bytes2HexStr(data));
         }
 
         @Override
