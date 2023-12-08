@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.ExpandableListView;
@@ -26,6 +27,7 @@ import com.ficat.easyble.gatt.callback.BleWriteCallback;
 import com.ficat.sample.adapter.DeviceServiceInfoAdapter;
 import com.ficat.sample.utils.ByteUtils;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -46,6 +48,8 @@ public class OperateActivity extends AppCompatActivity implements View.OnClickLi
     private DeviceServiceInfoAdapter adapter;
     private ServiceInfo curService;
     private CharacteristicInfo curCharacteristic;
+
+    private int write_done = 0;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -191,6 +195,7 @@ public class OperateActivity extends AppCompatActivity implements View.OnClickLi
     public void onClick(View v) {
         if (v.getId() == R.id.tv_connect) {
             BleManager.getInstance().connect(device.address, connectCallback);
+            Log.i("hi", "Connecting to hand");
             return;
         }
         if (!BleManager.getInstance().isConnected(device.address)) {
@@ -207,20 +212,66 @@ public class OperateActivity extends AppCompatActivity implements View.OnClickLi
             case R.id.tv_read:
                 BleManager.getInstance().read(device, curService.uuid, curCharacteristic.uuid, readCallback);
                 break;
-            case R.id.tv_write:
+            case R.id.tv_write: {
                 String str = etWrite.getText().toString();
                 if (TextUtils.isEmpty(str)) {
                     Toast.makeText(this, getResources().getString(R.string.tips_write_operation), Toast.LENGTH_SHORT).show();
                     return;
                 }
-                BleManager.getInstance().write(device, curService.uuid, curCharacteristic.uuid, ByteUtils.hexStr2Bytes(str), writeCallback);
-                break;
+                Log.i("hi", "writing to the hand: " + str);
+                Log.i("hi", "uuid: " + curService.uuid + " charuuid: " + curCharacteristic.uuid);
+                write_done = 0;
+                BleManager.getInstance().write(device, curService.uuid, curCharacteristic.uuid, str.getBytes(), writeCallback);
+//                while (write_done == 0) ;
+                while (true)     //evil lockout hack time
+                {
+                    double time = (double)System.currentTimeMillis() / 1000.0;
+//                    Log.i("hi",String.format("time=%f",time));
+                    String wstr = "M000000000000000000000000";
+                    byte[] barr = wstr.getBytes();
+                    int bidx = 1;
+                    for(int ch = 0; ch < 6; ch++)
+                    {
+                        double fpos = 40.0 * (Math.sin(time)*0.5+0.5)*40.+15.;
+                        if(ch == 5)
+                        {
+                            fpos = -fpos;
+                        }
+                        float fper = 0.2f;
+                        int fpostrans = (int)((fpos * 32767.) / 150.);
+                        int fpertrans = (int)((fper * 65535.) / 300.);
+                        byte[] b1 = uint16ToByteArray(fpostrans);
+                        byte[] b2 = uint16ToByteArray(fpertrans);
+                        for(int i = 0; i < 2; i++)
+                        {
+                            barr[bidx] = b1[i];
+                            bidx++;
+                        }
+                        for(int i = 0; i < 2; i++)
+                        {
+                            barr[bidx] = b2[i];
+                            bidx++;
+                        }
+                    }
+                    String displayString = ByteUtils.bytes2HexStr(barr);
+                    Log.i("hi","Sending: "+displayString);
+                    BleManager.getInstance().write(device, curService.uuid, curCharacteristic.uuid, barr, writeCallback);
+//                    while (write_done == 0) ;
+                }
+//                break;
+            }
             case R.id.tv_notify_or_indicate:
                 BleManager.getInstance().notify(device, curService.uuid, curCharacteristic.uuid, notifyCallback);
                 break;
             default:
                 break;
         }
+    }
+
+    /** Converts an uint16 into a 2 byte array */
+    public static byte[] uint16ToByteArray(int value) {
+        return new byte[] { (byte) (value >> 8 & 0xFF),
+                (byte) (value & 0xFF) };
     }
 
     @Override
@@ -307,13 +358,16 @@ public class OperateActivity extends AppCompatActivity implements View.OnClickLi
     private BleWriteCallback writeCallback = new BleWriteCallback() {
         @Override
         public void onWriteSuccess(byte[] data, BleDevice device) {
-            Logger.e("write success:" + ByteUtils.bytes2HexStr(data));
+            //Logger.e("write success:" + ByteUtils.bytes2HexStr(data));
+            write_done = 1;
+            Log.i("hi", "write success: "+ByteUtils.bytes2HexStr(data));
             tvWriteResult.setText(ByteUtils.bytes2HexStr(data));
         }
 
         @Override
         public void onFailure(int failCode, String info, BleDevice device) {
-            Logger.e("write fail:" + info);
+            write_done = 1;
+            Log.i("hi", "write FAILED!!!");
             tvWriteResult.setText("write fail:" + info);
         }
     };
