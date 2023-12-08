@@ -55,6 +55,10 @@ public class OperateActivity extends AppCompatActivity implements View.OnClickLi
 
     private int write_done = 0;
 
+    private double prev_time= 0 ;
+
+    private double start_time = (double)System.currentTimeMillis() / 1000.0;
+    
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -332,7 +336,9 @@ public class OperateActivity extends AppCompatActivity implements View.OnClickLi
             write_done = 1;
 
             //Log.i("hi", "write success: "+ByteUtils.bytes2HexStr(data));
-            double time = (double)System.currentTimeMillis() / 1000.0;
+            double time = (double)System.currentTimeMillis() / 1000.0 - start_time;
+            double tdif = time-prev_time;
+            prev_time = time;
             double fpos = 80.0 * (Math.sin(time)*0.5+0.5)+15.;
 //                    Log.i("hi",String.format("time=%f",time));
             byte[] barr = new byte[25];
@@ -379,9 +385,9 @@ public class OperateActivity extends AppCompatActivity implements View.OnClickLi
             }
             //            String displayString = ByteUtils.bytes2HexStr(barr);
             //            Log.i("hi","Sending: "+displayString);
-            if(ogfposarr[0] != fposarr[0])
+            if(tdif > 0.1)
             {
-                Log.i("hi", String.format("%f, %f",fposarr[0],ogfposarr[0] ));
+                Log.i("hi", String.format("timedif %f, curtime %f", tdif, time));
             }
             BleManager.getInstance().write(device, curService.uuid, curCharacteristic.uuid, barr, writeCallback);
 
