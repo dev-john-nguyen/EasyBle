@@ -521,9 +521,9 @@ public class BleGattImpl implements BleGatt {
                     "data length must range from 1 to 509", device);
             return;
         }
-        if (data.length > 20) {
-            Logger.w("data length is greater than the default(20 bytes), make sure  MTU >= " + (data.length + 3));
-        }
+//        if (data.length > 20) {
+//            Logger.w("data length is greater than the default(20 bytes), make sure  MTU >= " + (data.length + 3));
+//        }
         if (!checkConnection(device, callback)) {
             return;
         }

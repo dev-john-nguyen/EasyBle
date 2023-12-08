@@ -227,8 +227,8 @@ public class OperateActivity extends AppCompatActivity implements View.OnClickLi
                 {
                     double time = (double)System.currentTimeMillis() / 1000.0;
 //                    Log.i("hi",String.format("time=%f",time));
-                    String wstr = "M000000000000000000000000";
-                    byte[] barr = wstr.getBytes();
+                    byte[] barr = new byte[25];
+                    barr[0] = 77;   //0x4D
                     int bidx = 1;
                     for(int ch = 0; ch < 6; ch++)
                     {
@@ -254,7 +254,7 @@ public class OperateActivity extends AppCompatActivity implements View.OnClickLi
                         }
                     }
                     String displayString = ByteUtils.bytes2HexStr(barr);
-                    Log.i("hi","Sending: "+displayString);
+//                    Log.i("hi","Sending: "+displayString);
                     BleManager.getInstance().write(device, curService.uuid, curCharacteristic.uuid, barr, writeCallback);
 //                    while (write_done == 0) ;
                 }
@@ -270,8 +270,8 @@ public class OperateActivity extends AppCompatActivity implements View.OnClickLi
 
     /** Converts an uint16 into a 2 byte array */
     public static byte[] uint16ToByteArray(int value) {
-        return new byte[] { (byte) (value >> 8 & 0xFF),
-                (byte) (value & 0xFF) };
+        return new byte[] { (byte) (value & 0xFF),
+                (byte) (value >> 8 & 0xFF)};
     }
 
     @Override
