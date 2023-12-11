@@ -58,7 +58,8 @@ public class OperateActivity extends AppCompatActivity implements View.OnClickLi
     private double prev_time= 0 ;
 
     private double start_time = (double)System.currentTimeMillis() / 1000.0;
-    
+
+    private double nvTime = 0;
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -336,7 +337,8 @@ public class OperateActivity extends AppCompatActivity implements View.OnClickLi
             write_done = 1;
 
             //Log.i("hi", "write success: "+ByteUtils.bytes2HexStr(data));
-            double time = (double)System.currentTimeMillis() / 1000.0 - start_time;
+            double time = nvTime;//(double)System.currentTimeMillis() / 1000.0 - start_time;
+            nvTime+=0.010;
             double tdif = time-prev_time;
             prev_time = time;
             double fpos = 80.0 * (Math.sin(time)*0.5+0.5)+15.;
