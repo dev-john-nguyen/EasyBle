@@ -329,6 +329,50 @@ public class OperateActivity extends AppCompatActivity implements View.OnClickLi
         }
     };
 
+    public byte[] createBleFctlBuffer_V1(double[] fingerPositions, double[] fPer)
+    {
+        byte[] barr = new byte[25];
+        barr[0] = 77;   //0x4D
+        int bidx = 1;
+        for(int ch = 0; ch < 6; ch++)
+        {
+            float fper = 1.2f;
+            int fpostrans = (int)((fingerPositions[ch] * 32767.) / 150.);
+            int fpertrans = (int)((fPer[ch] * 65535.) / 300.);
+            byte[] b1 = uint16ToByteArray(fpostrans);
+            byte[] b2 = uint16ToByteArray(fpertrans);
+            for(int i = 0; i < 2; i++)
+            {
+                barr[bidx] = b1[i];
+                bidx++;
+            }
+            for(int i = 0; i < 2; i++)
+            {
+                barr[bidx] = b2[i];
+                bidx++;
+            }
+        }
+        return barr;
+    }
+    public byte[] createBleFctlBuffer_V2(double[] fingerPositions)
+    {
+        byte[] barr = new byte[14];
+        barr[0] = 77;   //0x4D, 'M'
+        barr[1] = 70;   //0x46, 'F'
+        int bidx = 2;
+        for(int ch = 0; ch < 6; ch++)
+        {
+            int fpostrans = (int)((fingerPositions[ch] * 32767.) / 150.);
+            byte[] b1 = uint16ToByteArray(fpostrans);
+            for(int i = 0; i < 2; i++)
+            {
+                barr[bidx] = b1[i];
+                bidx++;
+            }
+        }
+        return barr;
+    }
+
     private BleWriteCallback writeCallback = new BleWriteCallback() {
         @Override
         public void onWriteSuccess(byte[] data, BleDevice device) {
@@ -342,51 +386,15 @@ public class OperateActivity extends AppCompatActivity implements View.OnClickLi
             double tdif = time-prev_time;
             prev_time = time;
             double fpos = 80.0 * (Math.sin(time)*0.5+0.5)+15.;
-//                    Log.i("hi",String.format("time=%f",time));
-            byte[] barr = new byte[25];
-            barr[0] = 77;   //0x4D
-            int bidx = 1;
-            double[] ogfposarr = new double[6];
+            double[] fparr = new double[6];
+            double[] fper = new double[6];
             for(int ch = 0; ch < 6; ch++)
             {
-
-                if(ch == 5)
-                {
-                    fpos = -fpos;
-                }
-                ogfposarr[ch] = fpos;
-                float fper = 1.2f;
-                int fpostrans = (int)((fpos * 32767.) / 150.);
-                int fpertrans = (int)((fper * 65535.) / 300.);
-                byte[] b1 = uint16ToByteArray(fpostrans);
-                byte[] b2 = uint16ToByteArray(fpertrans);
-                for(int i = 0; i < 2; i++)
-                {
-                    barr[bidx] = b1[i];
-                    bidx++;
-                }
-                for(int i = 0; i < 2; i++)
-                {
-                    barr[bidx] = b2[i];
-                    bidx++;
-                }
+                fparr[ch] = fpos;
+                fper[ch] = 0.2;
             }
-            double[] fposarr = new double[6];
-            bidx = 1;
-            for(int ch = 0; ch < 6; ch++)
-            {
-                byte[] b16 = new byte[2];
-                for(int i = 0; i < 2; i++) {
-                    b16[i] = barr[bidx];
-                    bidx++;
-                }
-                bidx+=2;
-                short x =  java.nio.ByteBuffer.wrap(b16).order(java.nio.ByteOrder.LITTLE_ENDIAN).getShort();
-                double res = ((double)x*150.)/32767.;
-                fposarr[ch] = res;
-            }
-            //            String displayString = ByteUtils.bytes2HexStr(barr);
-            //            Log.i("hi","Sending: "+displayString);
+            //byte[] barr = createBleFctlBuffer_V1(fparr, fper);
+            byte[] barr = createBleFctlBuffer_V2(fparr);
             if(tdif > 0.1)
             {
                 Log.i("hi", String.format("timedif %f, curtime %f", tdif, time));
