@@ -1,6 +1,7 @@
 package com.ficat.sample;
 
 import android.Manifest;
+import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Rect;
@@ -87,7 +88,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         });
         SparseArray<int[]> res = new SparseArray<>();
-        res.put(R.layout.item_rv_scan_devices, new int[]{R.id.tv_name, R.id.tv_address, R.id.tv_connection_state});
+        res.put(R.layout.item_rv_scan_devices, new int[]{R.id.tv_name, R.id.tv_address, R.id.tv_rssi});
         adapter = new ScanDeviceAdapter(this, deviceList, res);
         adapter.setOnItemClickListener(new CommonRecyclerViewAdapter.OnItemClickListener() {
             @Override
@@ -142,13 +143,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private void startScan() {
         manager.startScan(new BleScanCallback() {
             @Override
-            public void onLeScan(BleDevice device, int rssi, byte[] scanRecord) {
+            public void onLeScan(BluetoothDevice device, int rssi, byte[] scanRecord) {
                 for (BleDevice d : deviceList) {
-                    if (device.address.equals(d.address)) {
+                    if (device.getAddress().equals(d.address)) {
+                        if("PSYONIC-APPDEV01".equals(device.getName())) {
+                            Log.e(TAG, "SAME ADDRESS RSSI = " + rssi);
+                        }
                         return;
                     }
                 }
-                deviceList.add(device);
+                BleDevice bleDevice = new BleDevice(device, rssi);
+                deviceList.add(bleDevice);
                 adapter.notifyDataSetChanged();
             }
 

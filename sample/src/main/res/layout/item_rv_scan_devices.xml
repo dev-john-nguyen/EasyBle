@@ -26,11 +26,10 @@
         android:textSize="12sp" />
 
     <TextView
-        android:id="@+id/tv_connection_state"
-        android:layout_width="wrap_content"
+        android:id="@+id/tv_rssi"
+        android:layout_width="80dp"
         android:layout_height="wrap_content"
-        android:layout_alignParentRight="true"
+        android:layout_alignParentEnd="true"
         android:layout_centerVertical="true"
-        android:text="@string/operate"
         android:textSize="12sp" />
 </RelativeLayout>

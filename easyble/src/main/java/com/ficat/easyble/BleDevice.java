@@ -13,14 +13,16 @@ import android.text.TextUtils;
 public class BleDevice implements Parcelable {
     public volatile boolean connected;
     public volatile boolean connecting;
+    public int rssi;
     public String address;
     public String name;
     private BluetoothDevice device;
 
-    BleDevice(BluetoothDevice device) {
+    public BleDevice(BluetoothDevice device, int rssi) {
         this.device = device;
         this.address = device.getAddress();
         this.name = device.getName();
+        this.rssi = rssi;
         if (TextUtils.isEmpty(name)) {
             name = "unknown";
         }
@@ -38,6 +40,7 @@ public class BleDevice implements Parcelable {
                 ", address='" + address + '\'' +
                 ", name='" + name + '\'' +
                 ", device=" + device +
+                ", RSSI=" + rssi +
                 '}';
     }
 

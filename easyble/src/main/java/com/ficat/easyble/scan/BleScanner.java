@@ -14,6 +14,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.ParcelUuid;
 import android.text.TextUtils;
+import android.util.Log;
 
 import com.ficat.easyble.BleDevice;
 import com.ficat.easyble.BleReceiver;
@@ -166,6 +167,7 @@ public class BleScanner implements BleScan<BleScanCallback>, BleReceiver.Bluetoo
             mLeScanCallback = new BluetoothAdapter.LeScanCallback() {
                 @Override
                 public void onLeScan(final BluetoothDevice device, final int rssi, final byte[] scanRecord) {
+                    Logger.i("BLUE SCANNER = " + device.toString());
                     mHandler.post(new Runnable() {
                         @Override
                         public void run() {
@@ -176,7 +178,7 @@ public class BleScanner implements BleScan<BleScanCallback>, BleReceiver.Bluetoo
                                 return;
                             }
                             if (mBleScanCallback != null) {
-                                mBleScanCallback.onLeScan(newBleDevice(device), rssi, scanRecord);
+                                mBleScanCallback.onLeScan(device, rssi, scanRecord);
                             }
                         }
                     });
@@ -203,7 +205,7 @@ public class BleScanner implements BleScan<BleScanCallback>, BleReceiver.Bluetoo
                             if (!hasResultByFilterUuids(result)) return;
                             if (mBleScanCallback == null) return;
                             byte[] scanRecord = (result.getScanRecord() == null) ? new byte[]{} : result.getScanRecord().getBytes();
-                            mBleScanCallback.onLeScan(newBleDevice(result.getDevice()), result.getRssi(), scanRecord);
+                            mBleScanCallback.onLeScan(result.getDevice(), result.getRssi(), scanRecord);
                         }
                     });
                 }

@@ -305,6 +305,7 @@ public final class BleManager {
      * @param callback result callback
      */
     public void readRssi(BleDevice device, BleRssiCallback callback) {
+
         mGatt.readRssi(device, callback);
     }
 
