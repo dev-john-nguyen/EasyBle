@@ -1,6 +1,5 @@
 package com.ficat.sample;
 
-import android.app.ProgressDialog;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
@@ -25,6 +24,8 @@ import com.ficat.easyble.gatt.callback.BleRssiCallback;
 import com.ficat.easyble.gatt.callback.BleWriteCallback;
 import com.ficat.sample.adapter.DeviceServiceInfoAdapter;
 import com.ficat.sample.utils.ByteUtils;
+import com.ficat.easyble.scan.BleScanCallback;
+import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +33,7 @@ import java.util.Map;
 
 public class OperateActivity extends AppCompatActivity implements View.OnClickListener {
     public static final String KEY_DEVICE_INFO = "keyDeviceInfo";
+    private final static String TAG = "OperateActivity";
 
     private BleDevice device;
     private LinearLayout llWrite, llRead;
@@ -194,7 +196,11 @@ public class OperateActivity extends AppCompatActivity implements View.OnClickLi
             return;
         }
         if (!BleManager.getInstance().isConnected(device.address)) {
-            Toast.makeText(this, getResources().getString(R.string.tips_connection_disconnected), Toast.LENGTH_SHORT).show();
+            if(v.getId() == R.id.tv_read_rssi) {
+                startScan();
+            } else {
+                Toast.makeText(this, getResources().getString(R.string.tips_connection_disconnected), Toast.LENGTH_SHORT).show();
+            }
             return;
         }
         switch (v.getId()) {
@@ -221,6 +227,42 @@ public class OperateActivity extends AppCompatActivity implements View.OnClickLi
             default:
                 break;
         }
+    }
+
+    private void startScan() {
+
+        if(BleManager.getInstance().isScanning()) return;
+
+        BleManager.getInstance().startScan(new BleScanCallback() {
+            private Boolean rssiFound;
+
+            public void onLeScan(BleDevice scannedDevice, int rssi, byte[] scanRecord) {
+                if(device.address.equals(scannedDevice.address)){
+                    rssiFound = true;
+                    Log.e(TAG, scannedDevice.name + " RSSI = " + rssi);
+                    Toast.makeText(OperateActivity.this, rssi + "dBm", Toast.LENGTH_SHORT).show();
+                    BleManager.getInstance().stopScan();
+                }
+                adapter.notifyDataSetChanged();
+            }
+
+            @Override
+            public void onStart(boolean startScanSuccess, String info) {
+                Log.e(TAG, "start scan = " + startScanSuccess + "   info: " + info);
+                rssiFound = false;
+                if (startScanSuccess) {
+                    adapter.notifyDataSetChanged();
+                }
+            }
+
+            @Override
+            public void onFinish() {
+                if(!rssiFound) {
+                    Toast.makeText(OperateActivity.this, "Please wait a few seconds before trying again.", Toast.LENGTH_LONG).show();
+                }
+                Log.e(TAG, "scan finish");
+            }
+        });
     }
 
     @Override
