@@ -1,10 +1,12 @@
 package com.ficat.sample;
 
 import android.app.ProgressDialog;
+import android.bluetooth.BluetoothDevice;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.ExpandableListView;
@@ -23,8 +25,12 @@ import com.ficat.easyble.gatt.callback.BleNotifyCallback;
 import com.ficat.easyble.gatt.callback.BleReadCallback;
 import com.ficat.easyble.gatt.callback.BleRssiCallback;
 import com.ficat.easyble.gatt.callback.BleWriteCallback;
+import com.ficat.easyble.scan.BleScanCallback;
 import com.ficat.sample.adapter.DeviceServiceInfoAdapter;
 import com.ficat.sample.utils.ByteUtils;
+import com.ficat.easypermissions.EasyPermissions;
+import com.ficat.easypermissions.RequestExecutor;
+
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +38,9 @@ import java.util.Map;
 
 public class OperateActivity extends AppCompatActivity implements View.OnClickListener {
     public static final String KEY_DEVICE_INFO = "keyDeviceInfo";
+    private final static String TAG = "OperateActivity";
+
+    private BleManager manager;
 
     private BleDevice device;
     private LinearLayout llWrite, llRead;
@@ -54,6 +63,7 @@ public class OperateActivity extends AppCompatActivity implements View.OnClickLi
         initData();
         initView();
         initElv();
+//        initBleManager();
     }
 
     private void initData() {
@@ -194,7 +204,11 @@ public class OperateActivity extends AppCompatActivity implements View.OnClickLi
             return;
         }
         if (!BleManager.getInstance().isConnected(device.address)) {
-            Toast.makeText(this, getResources().getString(R.string.tips_connection_disconnected), Toast.LENGTH_SHORT).show();
+            if(v.getId() == R.id.tv_read_rssi) {
+                startScan();
+            } else {
+                Toast.makeText(this, getResources().getString(R.string.tips_connection_disconnected), Toast.LENGTH_SHORT).show();
+            }
             return;
         }
         switch (v.getId()) {
@@ -221,6 +235,54 @@ public class OperateActivity extends AppCompatActivity implements View.OnClickLi
             default:
                 break;
         }
+    }
+
+    private void initBleManager() {
+        //open bluetooth without a request dialog
+        BleManager.toggleBluetooth(true);
+
+        BleManager.ScanOptions scanOptions = BleManager.ScanOptions
+                .newInstance()
+                .scanPeriod(8000)
+                .scanDeviceName(null);
+
+        BleManager.ConnectOptions connectOptions = BleManager.ConnectOptions
+                .newInstance()
+                .connectTimeout(12000);
+
+        manager = BleManager
+                .getInstance()
+                .setScanOptions(scanOptions)
+                .setConnectionOptions(connectOptions)
+                .setLog(true, "EasyBle")
+                .init(this.getApplication());
+    }
+
+    private void startScan() {
+        if(manager.isScanning()) return;
+        manager.startScan(new BleScanCallback() {
+            public void onLeScan(BluetoothDevice scannedDevice, int rssi, byte[] scanRecord) {
+                if(device.address.equals(scannedDevice.getAddress())){
+                    Log.e(TAG, scannedDevice.getName() + " RSSI = " + rssi);
+                    Toast.makeText(OperateActivity.this, rssi + "dBm", Toast.LENGTH_SHORT).show();
+                    manager.stopScan();
+                }
+                adapter.notifyDataSetChanged();
+            }
+
+            @Override
+            public void onStart(boolean startScanSuccess, String info) {
+                Log.e(TAG, "start scan = " + startScanSuccess + "   info: " + info);
+                if (startScanSuccess) {
+                    adapter.notifyDataSetChanged();
+                }
+            }
+
+            @Override
+            public void onFinish() {
+                Log.e(TAG, "scan finish");
+            }
+        });
     }
 
     @Override
